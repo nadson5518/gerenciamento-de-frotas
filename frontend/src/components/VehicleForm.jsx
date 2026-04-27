@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const initialState = {
   placa: '',
   modelo: '',
@@ -72,7 +74,7 @@ export function VehicleForm({ onClose }) {
   if (!validate()) return;
 
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/veiculos`, {
+    const response = await fetch(`${API_URL}/api/veiculos`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

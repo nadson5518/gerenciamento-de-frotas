@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { mapVehicle } from '../utils/mapVehicle';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 export function VehicleTable() {
   const [vehicles, setVehicles] = useState([]);
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL}/api/veiculos`)
+    fetch(`${API_URL}/api/veiculos`)
       .then(res => res.json())
       .then(data => {
         const mapped = data.map(mapVehicle);

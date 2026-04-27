@@ -13,6 +13,8 @@ import { VehiclesToolbar } from './components/VehiclesToolbar.jsx';
 import { calculateVehicleAlerts, countVehicleAlerts } from './utils/alerts.js';
 import { mapVehicle } from './utils/mapVehicle.js';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 
 function hasSelectedAlert(vehicle, alertFilter) {
   if (alertFilter === 'TODOS') return true;
@@ -45,8 +47,8 @@ function App() {
   async function loadVehicles() {
     try {
       const [vehiclesResponse, maintenancesResponse] = await Promise.all([
-        fetch(`${import.meta.env.VITE_API_URL}/api/veiculos`),
-        fetch(`${import.meta.env.VITE_API_URL}/api/manutencoes`)
+        fetch(`${API_URL}/api/veiculos`),
+        fetch(`${API_URL}/api/manutencoes`)
       ]);
 
       if (!vehiclesResponse.ok) {
