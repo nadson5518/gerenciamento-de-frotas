@@ -1,14 +1,16 @@
 import 'dotenv/config';
 import app from './app.js';
-// import { checkDatabaseConnection } from './config/database.js';
+import { checkDatabaseConnection } from './config/database.js';
 
-const PORT = Number(process.env.PORT ?? 3333);
+const PORT = process.env.PORT || 3001;
 
 async function bootstrap() {
   try {
-  
-    app.listen(PORT, () => {
-      console.log(`Fleet API running at http://localhost:${PORT}`);
+    await checkDatabaseConnection();
+    console.log('Database connected.');
+
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Fleet API running on port ${PORT}`);
     });
   } catch (error) {
     console.error('Failed to start server:');
