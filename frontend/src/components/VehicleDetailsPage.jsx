@@ -43,7 +43,7 @@ useEffect(() => {
     async function loadMaintenances() {
       try {
         const response = await fetch(
-          `http://localhost:3001/api/manutencoes?veiculo_id=${vehicle.id}`
+          `${import.meta.env.VITE_API_URL}/api/manutencoes?veiculo_id=${vehicle.id}`
         );
 
         if (!response.ok) {
@@ -176,7 +176,7 @@ useEffect(() => {
     event.preventDefault();
 
     try {
-      const response = await fetch('http://localhost:3001/api/manutencoes', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/manutencoes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -264,7 +264,7 @@ useEffect(() => {
     }
 
     const response = await fetch(
-      `http://localhost:3001/api/veiculos/${localVehicle.id}`,
+      `${import.meta.env.VITE_API_URL}/api/veiculos/${localVehicle.id}`,
       {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },

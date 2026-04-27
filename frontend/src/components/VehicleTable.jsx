@@ -5,7 +5,7 @@ export function VehicleTable() {
   const [vehicles, setVehicles] = useState([]);
 
   useEffect(() => {
-    fetch('http://localhost:3001/api/veiculos')
+    fetch(`${import.meta.env.VITE_API_URL}/api/veiculos`)
       .then(res => res.json())
       .then(data => {
         const mapped = data.map(mapVehicle);

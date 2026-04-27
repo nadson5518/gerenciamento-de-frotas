@@ -72,7 +72,7 @@ export function VehicleForm({ onClose }) {
   if (!validate()) return;
 
   try {
-    const response = await fetch('http://localhost:3001/api/veiculos', {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/veiculos`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
