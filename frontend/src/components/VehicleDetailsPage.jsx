@@ -1,4 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { createMaintenance, updateVehicle } from '../services/api.js';
+import {
+  buildMaintenanceAlerts,
+  getLatestScheduledMaintenance
+} from '../utils/alerts.js';
 
 const tabs = ['DOCUMENTOS', 'MANUTENÇÃO', 'CHECKLIST'];
 
@@ -7,70 +12,40 @@ function formatDate(value) {
   return new Date(value).toLocaleDateString('pt-BR');
 }
 
-export function VehicleDetailsPage({ vehicle, onClose, onUpdateVehicle }) {
-  const alerts = vehicle.computedAlerts ?? vehicle.alertas ?? {};
+const initialMaintenanceForm = {
+  data: '',
+  tipo: 'Preventiva',
+  descricao: '',
+  valor: '',
+  km: '',
+  proximaRevisaoData: '',
+  proximaRevisaoKm: ''
+};
 
+export function VehicleDetailsPage({
+  vehicle,
+  onClose,
+  onUpdateVehicle,
+  onAddMaintenance,
+  onFeedback
+}) {
+  const alerts = vehicle.computedAlerts ?? vehicle.alertas ?? {};
   const [activeTab, setActiveTab] = useState('DOCUMENTOS');
   const [documents, setDocuments] = useState(vehicle.documentos ?? []);
-  const [maintenanceList, setMaintenanceList] = useState([]);
   const [checklistHistory, setChecklistHistory] = useState(vehicle.checklistHistorico ?? []);
-  const [novoKm, setNovoKm] = useState('');
-  const [localVehicle, setLocalVehicle] = useState(vehicle);
-
-useEffect(() => {
-  setLocalVehicle(vehicle);
-  setNovoKm('');
-}, [vehicle.id]);
-
   const [checklist, setChecklist] = useState({
     pneus: false,
     freios: false,
     oleo: false,
     luzes: false
   });
+  const [newMaintenance, setNewMaintenance] = useState(initialMaintenanceForm);
+  const [novoKm, setNovoKm] = useState('');
+  const [isSavingMaintenance, setIsSavingMaintenance] = useState(false);
+  const [isSavingKm, setIsSavingKm] = useState(false);
 
-  const [newMaintenance, setNewMaintenance] = useState({
-    data: '',
-    tipo: 'Preventiva',
-    descricao: '',
-    valor: '',
-    km: '',
-    proximaRevisaoData: '',
-    proximaRevisaoKm: ''
-  });
-
-  useEffect(() => {
-    async function loadMaintenances() {
-      try {
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/api/manutencoes?veiculo_id=${vehicle.id}`
-        );
-
-        if (!response.ok) {
-          throw new Error(`Erro ao buscar manutenções: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        const mapped = data.map((item) => ({
-          id: item.id,
-          data: item.data,
-          tipo: item.tipo,
-          descricao: item.descricao || '',
-          valor: Number(item.valor || 0),
-          km: Number(item.km || 0),
-          proximaRevisaoData: item.proxima_revisao_data,
-          proximaRevisaoKm: item.proxima_revisao_km
-        }));
-
-        setMaintenanceList(mapped);
-      } catch (error) {
-        console.error('Erro ao carregar manutenções:', error);
-      }
-    }
-
-    loadMaintenances();
-  }, [vehicle.id]);
+  const maintenanceList = vehicle.manutencoes ?? [];
+  const currentKm = Number(vehicle?.detalhes?.kmAtual || 0);
 
   const documentosVencidos = useMemo(() => {
     const today = new Date();
@@ -78,84 +53,24 @@ useEffect(() => {
   }, [documents]);
 
   const ultimaManutencao = useMemo(() => {
-    if (maintenanceList.length === 0) return null;
-
+    if (!maintenanceList.length) return null;
     return [...maintenanceList].sort((a, b) => new Date(b.data) - new Date(a.data))[0];
   }, [maintenanceList]);
 
-  const proximaManutencao = useMemo(() => {
-  const grouped = new Map();
-
-  maintenanceList.forEach((item) => {
-    const key = `${item.tipo}-${item.descricao || ''}`;
-    const current = grouped.get(key);
-
-    if (!current || new Date(item.data) > new Date(current.data)) {
-      grouped.set(key, item);
-    }
-  });
-
-  const latestServices = Array.from(grouped.values()).filter(
-    (item) => item.proximaRevisaoData || item.proximaRevisaoKm
+  const proximaManutencao = useMemo(
+    () => getLatestScheduledMaintenance(maintenanceList),
+    [maintenanceList]
   );
 
-  if (latestServices.length === 0) return null;
-
-  return latestServices.sort((a, b) => {
-    const aDate = a.proximaRevisaoData ? new Date(a.proximaRevisaoData).getTime() : Infinity;
-    const bDate = b.proximaRevisaoData ? new Date(b.proximaRevisaoData).getTime() : Infinity;
-    return aDate - bDate;
-  })[0];
-}, [maintenanceList]);
-
-  const maintenanceAlerts = useMemo(() => {
-    const messages = [];
-    const today = new Date();
-    const kmAtual = Number(vehicle?.detalhes?.kmAtual || 0);
-
-    if (!proximaManutencao) {
-      messages.push('Nenhuma próxima revisão cadastrada.');
-      return messages;
-    }
-
-    const reviewDate = proximaManutencao.proximaRevisaoData
-      ? new Date(proximaManutencao.proximaRevisaoData)
-      : null;
-
-    const reviewKm =
-      proximaManutencao.proximaRevisaoKm != null
-        ? Number(proximaManutencao.proximaRevisaoKm)
-        : null;
-
-    if (reviewDate && reviewDate < today) {
-  messages.push(`${proximaManutencao.tipo} - ${proximaManutencao.descricao || 'Revisão'} vencida por data.`);
-    } else if (reviewDate) {
-      const diffMs = reviewDate - today;
-      const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-
-      if (diffDays <= 15) {
-        messages.push(`${proximaManutencao.tipo} - ${proximaManutencao.descricao || 'Revisão'} próxima por data: vence em ${diffDays} dia(s).`);
-      }
-    }
-
-    if (reviewKm !== null && kmAtual >= reviewKm) {
-  messages.push(`${proximaManutencao.tipo} - ${proximaManutencao.descricao || 'Revisão'} vencida por quilometragem.`);
-    } else if (reviewKm !== null) {
-      const kmRestante = reviewKm - kmAtual;
-
-      if (kmRestante <= 1000) {
-        messages.push(
-          `Revisão próxima por KM: faltam ${kmRestante.toLocaleString('pt-BR')} km.`
-        );
-      }
-    }
-
-    if (alerts?.kmDesatualizado) {
-      messages.push('Quilometragem precisa de atualização.');
-    }
-
-    return messages;
-  }, [proximaManutencao, vehicle, alerts]);
+  const maintenanceAlerts = useMemo(
+    () =>
+      buildMaintenanceAlerts({
+        nextMaintenance: proximaManutencao,
+        kmAtual: currentKm,
+        kmDesatualizado: alerts?.kmDesatualizado
+      }),
+    [alerts?.kmDesatualizado, currentKm, proximaManutencao]
+  );
 
   function handleUploadDocument(event) {
     const file = event.target.files?.[0];
@@ -174,61 +89,42 @@ useEffect(() => {
 
   async function handleAddMaintenance(event) {
     event.preventDefault();
+    if (isSavingMaintenance) return;
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/manutencoes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          veiculo_id: vehicle.id,
-          data: newMaintenance.data,
-          tipo: newMaintenance.tipo,
-          descricao: newMaintenance.descricao,
-          valor: Number(newMaintenance.valor || 0),
-          km: Number(newMaintenance.km || 0),
-          proxima_revisao_data: newMaintenance.proximaRevisaoData || null,
-          proxima_revisao_km: newMaintenance.proximaRevisaoKm
-            ? Number(newMaintenance.proximaRevisaoKm)
-            : null
-        })
+      setIsSavingMaintenance(true);
+
+      const data = await createMaintenance({
+        veiculo_id: vehicle.id,
+        data: newMaintenance.data,
+        tipo: newMaintenance.tipo,
+        descricao: newMaintenance.descricao,
+        valor: Number(newMaintenance.valor || 0),
+        km: Number(newMaintenance.km || 0),
+        proxima_revisao_data: newMaintenance.proximaRevisaoData || null,
+        proxima_revisao_km: newMaintenance.proximaRevisaoKm
+          ? Number(newMaintenance.proximaRevisaoKm)
+          : null
       });
 
-      const data = await response.json().catch(() => null);
-
-      if (!response.ok) {
-        throw new Error(
-          `Erro ao salvar manutenção: ${response.status} - ${JSON.stringify(data)}`
-        );
-      }
-
-      setMaintenanceList((current) => [
-        {
-          id: data.id,
-          data: data.data,
-          tipo: data.tipo,
-          descricao: data.descricao || '',
-          valor: Number(data.valor || 0),
-          km: Number(data.km || 0),
-          proximaRevisaoData: data.proxima_revisao_data,
-          proximaRevisaoKm: data.proxima_revisao_km
-        },
-        ...current
-      ]);
-
-      setNewMaintenance({
-        data: '',
-        tipo: 'Preventiva',
-        descricao: '',
-        valor: '',
-        km: '',
-        proximaRevisaoData: '',
-        proximaRevisaoKm: ''
+      onAddMaintenance?.(vehicle.id, {
+        id: data.id,
+        data: data.data,
+        tipo: data.tipo,
+        descricao: data.descricao || '',
+        valor: Number(data.valor || 0),
+        km: Number(data.km || 0),
+        proximaRevisaoData: data.proxima_revisao_data,
+        proximaRevisaoKm: data.proxima_revisao_km
       });
 
-      alert('Manutenção salva com sucesso!');
+      setNewMaintenance(initialMaintenanceForm);
+      onFeedback?.('Manutenção salva com sucesso!', 'success');
     } catch (error) {
       console.error(error);
-      alert(error.message);
+      onFeedback?.(error.message || 'Erro ao salvar manutenção.', 'error');
+    } finally {
+      setIsSavingMaintenance(false);
     }
   }
 
@@ -246,64 +142,50 @@ useEffect(() => {
       },
       ...current
     ]);
+
+    onFeedback?.('Checklist salvo localmente no painel.', 'success');
   }
 
-  async function atualizarKm() {
-  try {
-    const kmAtualVeiculo = Number(localVehicle?.detalhes?.kmAtual || 0);
+  async function handleUpdateKm() {
+    if (isSavingKm) return;
+
     const kmInformado = Number(novoKm);
-
     if (!novoKm || Number.isNaN(kmInformado)) {
-      alert('Informe um KM válido.');
+      onFeedback?.('Informe um KM válido.', 'error');
       return;
     }
 
-    if (kmInformado < kmAtualVeiculo) {
-      alert('O KM não pode ser menor que o atual.');
+    if (kmInformado < currentKm) {
+      onFeedback?.('O KM não pode ser menor que o atual.', 'error');
       return;
     }
 
-    const response = await fetch(
-      `${import.meta.env.VITE_API_URL}/api/veiculos/${localVehicle.id}`,
-      {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          km_atual: kmInformado,
-          data_ultima_atualizacao_km: new Date().toISOString().slice(0, 10)
-        })
-      }
-    );
+    try {
+      setIsSavingKm(true);
 
-    const data = await response.json().catch(() => null);
+      const updatedApiVehicle = await updateVehicle(vehicle.id, {
+        km_atual: kmInformado,
+        data_ultima_atualizacao_km: new Date().toISOString().slice(0, 10)
+      });
 
-    if (!response.ok) {
-      throw new Error(`Erro ao atualizar KM: ${response.status}`);
+      onUpdateVehicle?.({
+        ...vehicle,
+        detalhes: {
+          ...vehicle.detalhes,
+          kmAtual: Number(updatedApiVehicle.km_atual || kmInformado),
+          ultimaAtualizacaoKm: updatedApiVehicle.data_ultima_atualizacao_km
+        }
+      });
+
+      setNovoKm('');
+      onFeedback?.('KM atualizado com sucesso!', 'success');
+    } catch (error) {
+      console.error(error);
+      onFeedback?.(error.message || 'Erro ao atualizar KM.', 'error');
+    } finally {
+      setIsSavingKm(false);
     }
-
-    // 🔥 atualiza localmente (detalhe)
-    const updatedVehicle = {
-      ...localVehicle,
-      detalhes: {
-        ...localVehicle.detalhes,
-        kmAtual: kmInformado,
-        ultimaAtualizacaoKm: new Date().toISOString()
-      }
-    };
-
-    setLocalVehicle(updatedVehicle);
-
-    // 🔥 atualiza no App (lista / cards)
-    onUpdateVehicle(updatedVehicle);
-
-    setNovoKm('');
-
-    alert('KM atualizado com sucesso!');
-  } catch (error) {
-    console.error(error);
-    alert(error.message);
   }
-}
 
   return (
     <section className="details-page panel">
@@ -321,51 +203,51 @@ useEffect(() => {
           <p className="details-header__model">{vehicle.modelo}</p>
 
           <dl className="details-header__meta-grid">
-  <div>
-    <dt>Tipo</dt>
-    <dd>{vehicle.tipo}</dd>
-  </div>
+            <div>
+              <dt>Tipo</dt>
+              <dd>{vehicle.tipo}</dd>
+            </div>
 
-  <div>
-    <dt>Status</dt>
-    <dd>{vehicle.status}</dd>
-  </div>
+            <div>
+              <dt>Status</dt>
+              <dd>{vehicle.status}</dd>
+            </div>
 
-  <div>
-    <dt>Chassi</dt>
-    <dd>{vehicle.detalhes.chassi}</dd>
-  </div>
+            <div>
+              <dt>Chassi</dt>
+              <dd>{vehicle.detalhes.chassi}</dd>
+            </div>
 
-  <div>
-    <dt>Renavam</dt>
-    <dd>{vehicle.detalhes.renavam}</dd>
-  </div>
+            <div>
+              <dt>Renavam</dt>
+              <dd>{vehicle.detalhes.renavam}</dd>
+            </div>
 
-  <div>
-    <dt>KM</dt>
-    <dd>{Number(localVehicle.detalhes.kmAtual || 0).toLocaleString('pt-BR')} km</dd>
-  </div>
+            <div>
+              <dt>KM</dt>
+              <dd>{currentKm.toLocaleString('pt-BR')} km</dd>
+            </div>
 
-  <div>
-    <dt>Atualizar KM</dt>
-    <dd>
-      <div style={{ display: 'flex', gap: '6px' }}>
-        <input
-          type="number"
-          placeholder="Novo KM"
-          value={novoKm}
-          onChange={(e) => setNovoKm(e.target.value)}
-          min="0"
-          style={{ width: '120px' }}
-        />
+            <div>
+              <dt>Atualizar KM</dt>
+              <dd>
+                <div className="km-update-row">
+                  <input
+                    type="number"
+                    placeholder="Novo KM"
+                    value={novoKm}
+                    onChange={(event) => setNovoKm(event.target.value)}
+                    min="0"
+                    style={{ width: '120px' }}
+                  />
 
-        <button type="button" onClick={atualizarKm}>
-          OK
-        </button>
-      </div>
-    </dd>
-  </div>
-</dl>
+                  <button type="button" onClick={handleUpdateKm} disabled={isSavingKm}>
+                    {isSavingKm ? 'Salvando...' : 'OK'}
+                  </button>
+                </div>
+              </dd>
+            </div>
+          </dl>
         </div>
       </header>
 
@@ -456,13 +338,13 @@ useEffect(() => {
             <input
               type="date"
               value={newMaintenance.data}
-              onChange={(event) => setNewMaintenance((c) => ({ ...c, data: event.target.value }))}
+              onChange={(event) => setNewMaintenance((current) => ({ ...current, data: event.target.value }))}
               required
             />
 
             <select
               value={newMaintenance.tipo}
-              onChange={(event) => setNewMaintenance((c) => ({ ...c, tipo: event.target.value }))}
+              onChange={(event) => setNewMaintenance((current) => ({ ...current, tipo: event.target.value }))}
               required
             >
               <option value="Preventiva">Preventiva</option>
@@ -479,7 +361,7 @@ useEffect(() => {
               placeholder="Descrição"
               value={newMaintenance.descricao}
               onChange={(event) =>
-                setNewMaintenance((c) => ({ ...c, descricao: event.target.value }))
+                setNewMaintenance((current) => ({ ...current, descricao: event.target.value }))
               }
               required
             />
@@ -489,7 +371,7 @@ useEffect(() => {
               min="0"
               placeholder="Valor"
               value={newMaintenance.valor}
-              onChange={(event) => setNewMaintenance((c) => ({ ...c, valor: event.target.value }))}
+              onChange={(event) => setNewMaintenance((current) => ({ ...current, valor: event.target.value }))}
             />
 
             <input
@@ -497,14 +379,14 @@ useEffect(() => {
               min="0"
               placeholder="KM"
               value={newMaintenance.km}
-              onChange={(event) => setNewMaintenance((c) => ({ ...c, km: event.target.value }))}
+              onChange={(event) => setNewMaintenance((current) => ({ ...current, km: event.target.value }))}
             />
 
             <input
               type="date"
               value={newMaintenance.proximaRevisaoData}
               onChange={(event) =>
-                setNewMaintenance((c) => ({ ...c, proximaRevisaoData: event.target.value }))
+                setNewMaintenance((current) => ({ ...current, proximaRevisaoData: event.target.value }))
               }
             />
 
@@ -514,35 +396,40 @@ useEffect(() => {
               placeholder="Próxima revisão KM"
               value={newMaintenance.proximaRevisaoKm}
               onChange={(event) =>
-                setNewMaintenance((c) => ({ ...c, proximaRevisaoKm: event.target.value }))
+                setNewMaintenance((current) => ({ ...current, proximaRevisaoKm: event.target.value }))
               }
             />
 
-            <button type="submit">Nova manutenção</button>
+            <button type="submit" disabled={isSavingMaintenance}>
+              {isSavingMaintenance ? 'Salvando...' : 'Nova manutenção'}
+            </button>
           </form>
 
           <div className="maintenance-alerts panel">
             <h4>Próxima revisão e alertas</h4>
             <p>
-  <strong>
-    {proximaManutencao
-      ? `${proximaManutencao.tipo} - ${proximaManutencao.descricao || 'Sem descrição'}`
-      : 'Nenhuma revisão cadastrada'}
-  </strong>
-  <br />
-  {proximaManutencao
-    ? `${formatDate(proximaManutencao.proximaRevisaoData)} / ${
-        proximaManutencao.proximaRevisaoKm ?? '-'
-      } km`
-    : ''}
-</p>
+              <strong>
+                {proximaManutencao
+                  ? `${proximaManutencao.tipo} - ${proximaManutencao.descricao || 'Sem descrição'}`
+                  : 'Nenhuma revisão cadastrada'}
+              </strong>
+              <br />
+              {proximaManutencao
+                ? `${formatDate(proximaManutencao.proximaRevisaoData)} / ${
+                    proximaManutencao.proximaRevisaoKm ?? '-'
+                  } km`
+                : ''}
+            </p>
 
             <ul className="maintenance-alert-list">
-              {maintenanceAlerts.map((alert) => {
-                const isCritical = alert.toLowerCase().includes('vencida');
+              {maintenanceAlerts.map((alertMessage) => {
+                const isCritical = alertMessage.toLowerCase().includes('vencida');
                 return (
-                  <li key={alert} className={isCritical ? 'alert-critical' : 'alert-warning'}>
-                    {alert}
+                  <li
+                    key={alertMessage}
+                    className={isCritical ? 'alert-critical' : 'alert-warning'}
+                  >
+                    {alertMessage}
                   </li>
                 );
               })}
@@ -554,8 +441,8 @@ useEffect(() => {
               <li key={item.id}>
                 <div>
                   <strong>
-                   {item.tipo}
-                   {item.descricao ? ` - ${item.descricao}` : ''}
+                    {item.tipo}
+                    {item.descricao ? ` - ${item.descricao}` : ''}
                   </strong>
                   <span>
                     {formatDate(item.data)} • {Number(item.km || 0).toLocaleString('pt-BR')} km

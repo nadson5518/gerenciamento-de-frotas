@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import { createVehicle } from '../services/api.js';
+import { mapVehicle } from '../utils/mapVehicle.js';
 
 const initialState = {
   placa: '',
@@ -15,9 +17,10 @@ const initialState = {
   documentos: []
 };
 
-export function VehicleForm({ onClose }) {
+export function VehicleForm({ onClose, onVehicleCreated, onFeedback }) {
   const [form, setForm] = useState(initialState);
   const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const previewUrl = useMemo(() => {
     if (!form.foto) return null;
@@ -68,14 +71,13 @@ export function VehicleForm({ onClose }) {
   }
 
   async function handleSubmit(event) {
-  event.preventDefault();
-  if (!validate()) return;
+    event.preventDefault();
+    if (!validate() || isSubmitting) return;
 
-  try {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/veiculos`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    try {
+      setIsSubmitting(true);
+
+      const createdVehicle = await createVehicle({
         placa: form.placa,
         modelo: form.modelo,
         marca: form.marca,
@@ -87,23 +89,18 @@ export function VehicleForm({ onClose }) {
         km_atual: Number(form.kmAtual),
         data_ultima_atualizacao_km: form.dataUltimaKm,
         foto_url: null
-      })
-    });
+      });
 
-    const data = await response.json().catch(() => null);
-
-    if (!response.ok) {
-      throw new Error(`Erro ao salvar veículo: ${response.status} - ${JSON.stringify(data)}`);
+      onVehicleCreated?.(mapVehicle(createdVehicle));
+      onFeedback?.('Veículo salvo com sucesso!', 'success');
+      onClose();
+    } catch (error) {
+      console.error('Erro ao salvar veículo:', error);
+      onFeedback?.(error.message || 'Erro ao salvar veículo.', 'error');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    alert('Veículo salvo com sucesso!');
-    onClose();
-    window.location.reload();
-  } catch (error) {
-    console.error('Erro completo ao salvar veículo:', error);
-    alert(error.message);
   }
-}
 
   return (
     <div className="form-overlay" onClick={onClose}>
@@ -139,7 +136,12 @@ export function VehicleForm({ onClose }) {
               onChange={(event) => setField('marca', event.target.value)}
             />
             {errors.marca && <small>{errors.marca}</small>}
-            <input type="number" placeholder="Ano" value={form.ano} onChange={(event) => setField('ano', event.target.value)} />
+            <input
+              type="number"
+              placeholder="Ano"
+              value={form.ano}
+              onChange={(event) => setField('ano', event.target.value)}
+            />
             {errors.ano && <small>{errors.ano}</small>}
           </fieldset>
 
@@ -179,7 +181,11 @@ export function VehicleForm({ onClose }) {
               onChange={(event) => setField('kmAtual', event.target.value)}
             />
             {errors.kmAtual && <small>{errors.kmAtual}</small>}
-            <input type="date" value={form.dataUltimaKm} onChange={(event) => setField('dataUltimaKm', event.target.value)} />
+            <input
+              type="date"
+              value={form.dataUltimaKm}
+              onChange={(event) => setField('dataUltimaKm', event.target.value)}
+            />
             {errors.dataUltimaKm && <small>{errors.dataUltimaKm}</small>}
           </fieldset>
 
@@ -209,11 +215,11 @@ export function VehicleForm({ onClose }) {
           </fieldset>
 
           <footer className="form-footer">
-            <button type="button" className="btn-secondary" onClick={onClose}>
+            <button type="button" className="btn-secondary" onClick={onClose} disabled={isSubmitting}>
               Cancelar
             </button>
-            <button type="submit" className="btn-primary">
-              Salvar veículo
+            <button type="submit" className="btn-primary" disabled={isSubmitting}>
+              {isSubmitting ? 'Salvando...' : 'Salvar veículo'}
             </button>
           </footer>
         </form>

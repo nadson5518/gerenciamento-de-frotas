@@ -1,25 +1,33 @@
 import { useEffect, useState } from 'react';
+import { fetchVehicles } from '../services/api.js';
 import { mapVehicle } from '../utils/mapVehicle';
 
 export function VehicleTable() {
   const [vehicles, setVehicles] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  async function loadVehicles() {
+    try {
+      setIsLoading(true);
+      const data = await fetchVehicles();
+      setVehicles(data.map(mapVehicle));
+    } catch (error) {
+      console.error('Erro ao buscar veículos:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL}/api/veiculos`)
-      .then(res => res.json())
-      .then(data => {
-        const mapped = data.map(mapVehicle);
-        setVehicles(mapped);
-      })
-      .catch(err => console.error('Erro ao buscar veículos:', err));
+    loadVehicles();
   }, []);
 
   return (
     <section className="panel">
       <div className="panel__header">
         <h3>Veículos</h3>
-        <button type="button" onClick={() => window.location.reload()}>
-          Atualizar
+        <button type="button" onClick={loadVehicles} disabled={isLoading}>
+          {isLoading ? 'Atualizando...' : 'Atualizar'}
         </button>
       </div>
 

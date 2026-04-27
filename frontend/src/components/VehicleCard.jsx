@@ -1,11 +1,13 @@
+import { memo } from 'react';
+
 const alertasLabels = {
   documentoVencido: 'Documento vencido',
   manutencaoPendente: 'Manutenção pendente',
   kmDesatualizado: 'KM desatualizado'
 };
 
-export function VehicleCard({ vehicle, onOpenDetails }) {
-  const activeAlerts = Object.entries(vehicle.computedAlerts ?? vehicle.alertas).filter(
+function VehicleCardComponent({ vehicle, onOpenDetails }) {
+  const activeAlerts = Object.entries(vehicle.computedAlerts ?? vehicle.alertas ?? {}).filter(
     ([, active]) => active
   );
 
@@ -60,3 +62,5 @@ export function VehicleCard({ vehicle, onOpenDetails }) {
     </article>
   );
 }
+
+export const VehicleCard = memo(VehicleCardComponent);

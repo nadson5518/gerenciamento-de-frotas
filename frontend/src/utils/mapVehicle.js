@@ -16,7 +16,8 @@ export function mapVehicle(apiVehicle) {
       ano: apiVehicle.ano,
       chassi: apiVehicle.chassi,
       renavam: apiVehicle.renavam,
-      kmAtual
+      kmAtual,
+      ultimaAtualizacaoKm: apiVehicle.data_ultima_atualizacao_km || null
     },
 
     documentos: [],
