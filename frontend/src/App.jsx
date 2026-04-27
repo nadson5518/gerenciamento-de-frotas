@@ -45,8 +45,8 @@ function App() {
   async function loadVehicles() {
     try {
       const [vehiclesResponse, maintenancesResponse] = await Promise.all([
-        fetch('http://localhost:3001/api/veiculos'),
-        fetch('http://localhost:3001/api/manutencoes')
+        fetch(`${import.meta.env.VITE_API_URL}/api/veiculos`),
+        fetch(`${import.meta.env.VITE_API_URL}/api/manutencoes`)
       ]);
 
       if (!vehiclesResponse.ok) {
