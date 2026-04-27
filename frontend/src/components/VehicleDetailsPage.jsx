@@ -5,6 +5,8 @@ import {
   getLatestScheduledMaintenance
 } from '../utils/alerts.js';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const tabs = ['DOCUMENTOS', 'MANUTENÇÃO', 'CHECKLIST'];
 
 function formatDate(value) {
@@ -46,6 +48,48 @@ export function VehicleDetailsPage({
 
   const maintenanceList = vehicle.manutencoes ?? [];
   const currentKm = Number(vehicle?.detalhes?.kmAtual || 0);
+  const [newMaintenance, setNewMaintenance] = useState({
+    data: '',
+    tipo: 'Preventiva',
+    descricao: '',
+    valor: '',
+    km: '',
+    proximaRevisaoData: '',
+    proximaRevisaoKm: ''
+  });
+
+  useEffect(() => {
+    async function loadMaintenances() {
+      try {
+        const response = await fetch(
+          `${API_URL}/api/manutencoes?veiculo_id=${vehicle.id}`
+        );
+
+        if (!response.ok) {
+          throw new Error(`Erro ao buscar manutenções: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        const mapped = data.map((item) => ({
+          id: item.id,
+          data: item.data,
+          tipo: item.tipo,
+          descricao: item.descricao || '',
+          valor: Number(item.valor || 0),
+          km: Number(item.km || 0),
+          proximaRevisaoData: item.proxima_revisao_data,
+          proximaRevisaoKm: item.proxima_revisao_km
+        }));
+
+        setMaintenanceList(mapped);
+      } catch (error) {
+        console.error('Erro ao carregar manutenções:', error);
+      }
+    }
+
+    loadMaintenances();
+  }, [vehicle.id]);
 
   const documentosVencidos = useMemo(() => {
     const today = new Date();
@@ -105,6 +149,21 @@ export function VehicleDetailsPage({
         proxima_revisao_km: newMaintenance.proximaRevisaoKm
           ? Number(newMaintenance.proximaRevisaoKm)
           : null
+      const response = await fetch(`${API_URL}/api/manutencoes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          veiculo_id: vehicle.id,
+          data: newMaintenance.data,
+          tipo: newMaintenance.tipo,
+          descricao: newMaintenance.descricao,
+          valor: Number(newMaintenance.valor || 0),
+          km: Number(newMaintenance.km || 0),
+          proxima_revisao_data: newMaintenance.proximaRevisaoData || null,
+          proxima_revisao_km: newMaintenance.proximaRevisaoKm
+            ? Number(newMaintenance.proximaRevisaoKm)
+            : null
+        })
       });
 
       onAddMaintenance?.(vehicle.id, {
@@ -162,6 +221,35 @@ export function VehicleDetailsPage({
 
     try {
       setIsSavingKm(true);
+    const response = await fetch(
+      `${API_URL}/api/veiculos/${localVehicle.id}`,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          km_atual: kmInformado,
+          data_ultima_atualizacao_km: new Date().toISOString().slice(0, 10)
+        })
+      }
+    );
+
+    const data = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      throw new Error(`Erro ao atualizar KM: ${response.status}`);
+    }
+
+    // 🔥 atualiza localmente (detalhe)
+    const updatedVehicle = {
+      ...localVehicle,
+      detalhes: {
+        ...localVehicle.detalhes,
+        kmAtual: kmInformado,
+        ultimaAtualizacaoKm: new Date().toISOString()
+      }
+    };
+
+    setLocalVehicle(updatedVehicle);
 
       const updatedApiVehicle = await updateVehicle(vehicle.id, {
         km_atual: kmInformado,

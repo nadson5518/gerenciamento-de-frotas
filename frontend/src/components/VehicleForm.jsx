@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { createVehicle } from '../services/api.js';
 import { mapVehicle } from '../utils/mapVehicle.js';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const initialState = {
   placa: '',
   modelo: '',
@@ -78,6 +80,14 @@ export function VehicleForm({ onClose, onVehicleCreated, onFeedback }) {
       setIsSubmitting(true);
 
       const createdVehicle = await createVehicle({
+  event.preventDefault();
+  if (!validate()) return;
+
+  try {
+    const response = await fetch(`${API_URL}/api/veiculos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         placa: form.placa,
         modelo: form.modelo,
         marca: form.marca,

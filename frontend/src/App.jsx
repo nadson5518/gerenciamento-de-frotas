@@ -40,6 +40,18 @@ function App() {
   const showFeedback = useCallback((message, type = 'success') => {
     setFeedback({ message, type });
   }, []);
+  
+  useEffect(() => {
+  async function loadVehicles() {
+    try {
+      const [vehiclesResponse, maintenancesResponse] = await Promise.all([
+        fetch(`${API_URL}/api/veiculos`),
+        fetch(`${API_URL}/api/manutencoes`)
+      ]);
+
+      if (!vehiclesResponse.ok) {
+        throw new Error(`Erro ao buscar veículos: ${vehiclesResponse.status}`);
+      }
 
   const loadVehicles = useCallback(async () => {
     try {

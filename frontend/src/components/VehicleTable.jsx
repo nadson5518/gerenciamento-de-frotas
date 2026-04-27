@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { fetchVehicles } from '../services/api.js';
 import { mapVehicle } from '../utils/mapVehicle';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 export function VehicleTable() {
   const [vehicles, setVehicles] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -20,6 +22,13 @@ export function VehicleTable() {
 
   useEffect(() => {
     loadVehicles();
+    fetch(`${API_URL}/api/veiculos`)
+      .then(res => res.json())
+      .then(data => {
+        const mapped = data.map(mapVehicle);
+        setVehicles(mapped);
+      })
+      .catch(err => console.error('Erro ao buscar veículos:', err));
   }, []);
 
   return (
