@@ -10,9 +10,45 @@
   padding: 1.25rem;
 }
 
-.sidebar__title {
-  font-size: 1.3rem;
+.sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   margin-bottom: 1rem;
+}
+
+.sidebar__logo {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 9999px;
+  background: #f5ac07;
+  display: grid;
+  place-items: center;
+  border: 4px solid #1f2937;
+}
+
+.sidebar__logo span {
+  color: #111827;
+  font-size: 1.8rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.sidebar__brand-text {
+  display: grid;
+  line-height: 1.1;
+}
+
+.sidebar__title {
+  font-size: 1.6rem;
+  letter-spacing: 0.06em;
+}
+
+.sidebar__subtitle {
+  color: #f5ac07;
+  font-size: 0.9rem;
+  letter-spacing: 0.3em;
+  font-weight: 600;
 }
 
 .sidebar__menu {
