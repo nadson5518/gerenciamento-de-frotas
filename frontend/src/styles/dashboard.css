@@ -5,20 +5,25 @@
 }
 
 .sidebar {
-  background: #0f172a;
-  color: #f8fafc;
+  background: #111827;
+  color: #e5e7eb;
   padding: 1.25rem;
 }
 
 .sidebar__brand {
   display: block;
   margin-bottom: 1rem;
+  background: #f8fafc;
+  padding: 0.6rem;
+  border-radius: 0.75rem;
 }
 
 .sidebar__brand-image {
   width: 100%;
-  max-width: 220px;
+  max-width: 260px;
+  height: auto;
   display: block;
+  margin: 0 auto;
 }
 
 .sidebar__menu {
