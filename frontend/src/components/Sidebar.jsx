@@ -1,3 +1,5 @@
+import alphaLogo from '../assets/alpha-transportes-logo.svg';
+
 const menuItems = [
   'Dashboard',
   'Veículos',
@@ -11,13 +13,7 @@ export function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="sidebar__brand" aria-label="Alpha Transportes">
-        <div className="sidebar__logo" aria-hidden="true">
-          <span>A</span>
-        </div>
-        <div className="sidebar__brand-text">
-          <h1 className="sidebar__title">ALPHA</h1>
-          <p className="sidebar__subtitle">TRANSPORTES</p>
-        </div>
+        <img className="sidebar__brand-image" src={alphaLogo} alt="Logotipo da Alpha Transportes" />
       </div>
       <nav>
         <ul className="sidebar__menu">
