@@ -1,7 +1,6 @@
 <svg width="320" height="260" viewBox="0 0 320 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
   <title id="title">Alpha Transportes</title>
   <desc id="desc">Logotipo da Alpha Transportes com símbolo circular e texto</desc>
-  <rect width="320" height="260" fill="#ffffff"/>
   <circle cx="160" cy="70" r="50" fill="#f3ad16" stroke="#1b2430" stroke-width="12"/>
   <path d="M160 36 L197 118 H177 L170 102 H150 L143 118 H123 L160 36 Z M160 69 L155 83 H165 Z" fill="#171d27"/>
   <rect x="182" y="44" width="8" height="45" transform="rotate(18 186 66)" fill="#ffffff" opacity="0.9"/>
