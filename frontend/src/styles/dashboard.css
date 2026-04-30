@@ -5,22 +5,20 @@
 }
 
 .sidebar {
-  background: #111827;
-  color: #e5e7eb;
+  background: #0b1b3b;
+  color: #e2e8f0;
   padding: 1.25rem;
 }
 
 .sidebar__brand {
   display: block;
   margin-bottom: 1rem;
-  background: #f8fafc;
-  padding: 0.6rem;
-  border-radius: 0.75rem;
+  padding: 0;
 }
 
 .sidebar__brand-image {
   width: 100%;
-  max-width: 260px;
+  max-width: 280px;
   height: auto;
   display: block;
   margin: 0 auto;
@@ -43,7 +41,7 @@
 }
 
 .sidebar__item button:hover {
-  background: rgba(148, 163, 184, 0.2);
+  background: rgba(243, 173, 22, 0.18);
 }
 
 .content {
